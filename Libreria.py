@@ -182,51 +182,84 @@ class BaseDeDatosLibros:
 #  Responsable de: definir el diccionario COLORES,
 #  y construir el widget reutilizable TablaLibros.
 # =============================================================
- 
-# Diccionario global de colores de la aplicación
-# Debe contener al menos: primario, secundario, fondo, blanco,
-# texto, texto_claro, exito, error, hover, fila_par, fila_impar, borde
-COLORES = {}
- 
+COLORES = {    
+    "primario": "#2c3e50",
+    "secundario": "#436B93",  
+    "fondo": "#ecf0f1",      
+    "blanco": "#ffffff",
+    "texto": "#333333",
+    "texto_claro": "#7f8c8d",
+    "exito": "#27ae60",      
+    "error": "#c0392b", 
+    "hover": "#3498db",    
+    "fila_par": "#ffffff",   
+    "fila_impar": "#f2f2f2",
+    "borde": "#bdc2c7"}
  
 class TablaLibros(tk.Frame):
-    """
-    Widget reutilizable que muestra una tabla de libros con scroll.
-    Se usa tanto en la ventana de empleado como en la de cliente.
-    """
- 
     COLUMNAS   = ("id", "titulo", "autor", "genero", "isbn", "stock")
     ENCABEZADOS = ("ID", "Título", "Autor", "Género", "ISBN", "Stock")
-    ANCHOS     = (40, 200, 160, 100, 140, 50)
- 
+    ANCHOS      = (40, 200, 160, 100, 140, 50)
+
     def __init__(self, parent, mostrar_stock=True, **kw):
         super().__init__(parent, **kw)
         self._construir(mostrar_stock)
- 
+
     def _construir(self, mostrar_stock):
-        """
-        Configura el estilo del Treeview con ttk.Style,
-        agrega scrollbars vertical y horizontal,
-        y define las etiquetas de color para filas alternas.
-        El parámetro mostrar_stock oculta la columna 'stock'
-        cuando es False (vista de cliente).
-        """
-        pass
- 
+        estilo = ttk.Style()
+        estilo.theme_use("clam")        
+        estilo.configure("Treeview", 
+                         background=COLORES["blanco"],
+                         foreground=COLORES["texto"],
+                         fieldbackground=COLORES["blanco"],
+                         gridcolor=COLORES["borde"],
+                         rowheight=25)    
+        estilo.configure("Treeview.Heading",
+                         background=COLORES["fondo"],
+                         foreground=COLORES["texto_claro"],
+                         relief="flat")
+        estilo.map("Treeview", 
+                   background=[('selected', COLORES["hover"])])
+        self.tree = ttk.Treeview(self, columns=self.COLUMNAS, show="headings")
+        
+        for i in range(len(self.COLUMNAS)):
+            self.tree.heading(self.COLUMNAS[i], text=self.ENCABEZADOS[i])
+            self.tree.column(self.COLUMNAS[i], width=self.ANCHOS[i], anchor="center")
+
+        if not mostrar_stock:
+            self.tree["displaycolumns"] = ("id", "titulo", "autor", "genero", "isbn")
+        scroll_v = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
+        scroll_h = ttk.Scrollbar(self, orient="horizontal", command=self.tree.xview)
+        self.tree.configure(yscrollcommand=scroll_v.set, xscrollcommand=scroll_h.set)
+        self.tree.grid(row=0, column=0, sticky="nsew")
+        scroll_v.grid(row=0, column=1, sticky="ns")
+        scroll_h.grid(row=1, column=0, sticky="ew")
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+        self.tree.tag_configure("fila_par", background=COLORES["fila_par"])
+        self.tree.tag_configure("fila_impar", background=COLORES["fila_impar"])
+
     def cargar(self, libros):
-        """
-        Recibe una lista de dicts y los muestra en la tabla.
-        Aplica colores alternos (fila_par / fila_impar).
-        """
-        pass
- 
+        for fila in self.tree.get_children():
+            self.tree.delete(fila)            
+        for indice, libro in enumerate(libros):
+            tag_color = "fila_par" if indice % 2 == 0 else "fila_impar"            
+            valores = (
+                libro.get("id"),
+                libro.get("titulo"),
+                libro.get("autor"),
+                libro.get("genero"),
+                libro.get("isbn"),
+                libro.get("stock")            
+                )
+            self.tree.insert("", "end", values=valores, tags=(tag_color,))
+
     def seleccionado_id(self):
-        """
-        Retorna el id (int) del libro seleccionado en la tabla,
-        o None si no hay ninguno seleccionado.
-        """
-        pass
- 
+        item = self.tree.focus()
+        if item:
+            valores = self.tree.item(item, "values")
+            return int(valores[0])
+        return None
  
 # =============================================================
 #  SECCIÓN MIEMBRO 3 — VENTANA PRINCIPAL Y LOGIN
